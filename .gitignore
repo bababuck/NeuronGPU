@@ -35,3 +35,5 @@ libtool
 /.settings/
 doxygen
 python/test/log.txt
+data/*
+libneurongpu.la
