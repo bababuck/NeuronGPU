@@ -14,7 +14,7 @@ print('Author: B. Golosio, University of Cagliari')
 print('email: golosio@unica.it')
 print('-----------------------------------------------------------------')
 
-lib_path="/usr/local/lib/libneurongpu.so"
+lib_path="/home/bababuck/install/lib/libneurongpu.so"
 _neurongpu=ctypes.CDLL(lib_path)
 
 c_float_p = ctypes.POINTER(ctypes.c_float)
