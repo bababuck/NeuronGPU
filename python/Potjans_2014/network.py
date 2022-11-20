@@ -25,6 +25,8 @@ Main file of the microcircuit defining the ``Network`` class with functions to
 build and simulate the network.
 
 """
+import sys
+sys.path.append('/home/bababuck/Project/NeuronGPU/pythonlib')
 
 import os
 import numpy as np
