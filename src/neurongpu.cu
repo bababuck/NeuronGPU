@@ -281,7 +281,9 @@ int NeuronGPU::Calibrate()
   calibrate_flag_ = true;
   BuildDirectConnections();
 
+#ifdef HAVE_MPI
   gpuErrchk(cudaMemcpyToSymbol(NeuronGPUMpiFlag, &mpi_flag_, sizeof(bool)));
+#endif
 
   if (verbosity_level_>=1) {
     std::cout << MpiRankStr() << "Calibrating ...\n";
@@ -421,6 +423,7 @@ int NeuronGPU::EndSimulation()
     std::cout << MpiRankStr() << "  ExternalSpikeReset_time: " <<
       ExternalSpikeReset_time_ << "\n";
   }
+#ifdef HAVE_MPI
   if (mpi_flag_ && verbosity_level_>=4) {
     std::cout << MpiRankStr() << "  SendSpikeToRemote_MPI_time: " <<
       connect_mpi_->SendSpikeToRemote_MPI_time_ << "\n";
@@ -433,7 +436,8 @@ int NeuronGPU::EndSimulation()
     std::cout << MpiRankStr() << "  JoinSpike_time: " <<
       connect_mpi_->JoinSpike_time_  << "\n";
   }
-  
+#endif
+
   if (verbosity_level_>=1) {
     std::cout << MpiRankStr() << "Building time: " <<
       (build_real_time_ - start_real_time_) << "\n";
@@ -1089,6 +1093,7 @@ int NeuronGPU::MpiFinalize()
 
 std::string NeuronGPU::MpiRankStr()
 {
+#ifdef HAVE_MPI
   if (mpi_flag_) {
     return std::string("MPI rank ") + std::to_string(connect_mpi_->mpi_id_)
       + " : ";
@@ -1096,6 +1101,9 @@ std::string NeuronGPU::MpiRankStr()
   else {
     return "";
   }
+#else
+  return "";
+#endif
 }
 
 unsigned int *NeuronGPU::RandomInt(size_t n)
