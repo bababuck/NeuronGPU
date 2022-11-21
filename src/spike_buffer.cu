@@ -233,8 +233,9 @@ __device__ void PushSpike(int i_spike_buffer, float height)
 __global__ void SpikeBufferUpdate()
 {
   int i_spike_buffer = threadIdx.x + blockIdx.x * blockDim.x;
-  if (i_spike_buffer>=NSpikeBuffer) return;
-  
+  if (i_spike_buffer>=(2*NSpikeBuffer)) return;
+  if ((i_spike_buffer & 1) && (NeuronGPUTimeIdx % GroupResolution)) return;
+
   int i_group=NodeGroupMap[i_spike_buffer];
   int den_delay_idx;
   float *den_delay_arr = NodeGroupArray[i_group].den_delay_arr_;
