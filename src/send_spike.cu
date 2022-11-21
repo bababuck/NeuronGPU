@@ -56,6 +56,18 @@ __device__ void SendSpike(int i_source, int i_conn, float height,
   SpikeConnIdx[pos] = i_conn;
   SpikeHeight[pos] = height;
   SpikeTargetNum[pos] = target_num;
+
+  pos = atomicAdd(InternSpikeNum, 1);
+  if (pos>=MaxInternSpikeNum) {
+    printf("Number of spikes larger than InternMaxSpikeNum: %d\n", InternMaxInternSpikeNum);
+    *InternSpikeNum = InternMaxSpikeNum;
+    return;
+  }
+  pos = blockIdx.x * InternMaxSpikeNum + pos;
+  InternSpikeSourceIdx[pos] = i_source;
+  InternSpikeConnIdx[pos] = i_conn;
+  InternSpikeHeight[pos] = height;
+  InternSpikeTargetNum[pos] = target_num;
 }
 
 __global__ void DeviceSpikeInit(int *spike_num, int *spike_source_idx,
