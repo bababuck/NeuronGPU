@@ -118,3 +118,11 @@ __global__ void SpikeReset()
 {
   *SpikeNum = 0;
 }
+
+__device__ void InternSpikeReset()
+{
+  if (!(threadIdx.x ||
+        threadIdx.y)) {
+    InternSpikeNum[blockIdx.x] = 0;
+  }
+}

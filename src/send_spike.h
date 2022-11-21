@@ -39,4 +39,6 @@ void SpikeInit(int max_spike_num, int num_blocks);
 
 __global__ void SpikeReset();
 
+__device__ void InternSpikeReset();
+
 #endif
