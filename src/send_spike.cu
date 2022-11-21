@@ -36,6 +36,7 @@ __device__ int *SpikeConnIdx;
 __device__ float *SpikeHeight;
 __device__ int *SpikeTargetNum;
 
+__device__ int InternMaxSpikeNum;
 __device__ int *InternSpikeNum;
 __device__ int *InternSpikeSourceIdx;
 __device__ int *InternSpikeConnIdx;
@@ -81,7 +82,7 @@ __global__ void DeviceInternSpikeInit(int *spike_num, int *spike_source_idx,
   InternSpikeConnIdx = spike_conn_idx;
   InternSpikeHeight = spike_height;
   InternSpikeTargetNum = spike_target_num;
-  InternMaxSpikeNum = max_spike_num;
+  InternMaxSpikeNum = max_spike_num / num_blocks;
   for (int i=0;i<num_blocks;++i){
     InternSpikeNum[i] = 0;
   }
