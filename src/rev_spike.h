@@ -19,6 +19,10 @@ extern unsigned int *d_RevSpikeNum;
 extern unsigned int *d_RevSpikeTarget;
 extern int *d_RevSpikeNConn;
 
+extern unsigned int *d_RevSpikeNum;
+extern unsigned int *d_RevSpikeTarget;
+extern int *d_RevSpikeNConn;
+
 __global__ void RevSpikeReset();
 
 __device__ void InternRevSpikeReset()

@@ -317,7 +317,7 @@ int NeuronGPU::Calibrate()
 #endif
   
   if (net_connection_->NRevConnections()>0) {
-    RevSpikeInit(net_connection_); 
+    RevSpikeInit(net_connection_, NUM_BLOCKS); 
   }
   
   multimeter_->OpenFiles();

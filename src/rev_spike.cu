@@ -28,12 +28,19 @@ unsigned int *d_RevSpikeNum;
 unsigned int *d_RevSpikeTarget;
 int *d_RevSpikeNConn;
 
+unsigned int *d_InternRevSpikeNum;
+unsigned int *d_InternRevSpikeTarget;
+int *d_InternRevSpikeNConn;
+
 extern __device__ void SynapseUpdate(int syn_group, float *w, float Dt);
 
 __device__ unsigned int *RevSpikeNum;
 __device__ unsigned int *RevSpikeTarget;
 __device__ int *RevSpikeNConn;
 
+__device__ unsigned int *InternRevSpikeNum;
+__device__ unsigned int *InternRevSpikeTarget;
+__device__ int *InternRevSpikeNConn;
 
 //////////////////////////////////////////////////////////////////////
 // This is the function called by the nested loop
@@ -118,6 +125,19 @@ __global__ void DeviceRevSpikeInit(unsigned int *rev_spike_num,
   *RevSpikeNum = 0;
 }
 
+__global__ void DeviceInternRevSpikeInit(unsigned int *rev_spike_num,
+				         unsigned int *rev_spike_target,
+				         int *rev_spike_n_conn,
+					 int num_blocks)
+{
+  RevSpikeNum = rev_spike_num;
+  RevSpikeTarget = rev_spike_target;
+  RevSpikeNConn = rev_spike_n_conn;
+  for (int i=0;i<num_blocks;++i){
+    RevSpikeNum[i] = 0;
+  }
+}
+
 __global__ void RevSpikeReset()
 {
   *RevSpikeNum = 0;
@@ -154,7 +174,7 @@ int ResetConnectionSpikeTimeDown(NetConnection *net_connection)
   return 0;
 }
 
-int RevSpikeInit(NetConnection *net_connection)
+int RevSpikeInit(NetConnection *net_connection, int num_blocks)
 {
   int n_spike_buffers = net_connection->connection_.size();
   
@@ -165,7 +185,6 @@ int RevSpikeInit(NetConnection *net_connection)
   gpuErrchk( cudaDeviceSynchronize() );
 
   gpuErrchk(cudaMalloc(&d_RevSpikeNum, sizeof(unsigned int)));
-  
   gpuErrchk(cudaMalloc(&d_RevSpikeTarget,
 		       n_spike_buffers*sizeof(unsigned int)));
   gpuErrchk(cudaMalloc(&d_RevSpikeNConn,
@@ -173,6 +192,15 @@ int RevSpikeInit(NetConnection *net_connection)
 
   DeviceRevSpikeInit<<<1,1>>>(d_RevSpikeNum, d_RevSpikeTarget,
 			      d_RevSpikeNConn);
+
+  gpuErrchk(cudaMalloc(&d_InternRevSpikeNum, num_blocks*sizeof(unsigned int)));
+  gpuErrchk(cudaMalloc(&d_InternRevSpikeTarget,
+		       n_spike_buffers*sizeof(unsigned int)));
+  gpuErrchk(cudaMalloc(&d_InternRevSpikeNConn,
+		       n_spike_buffers*sizeof(int)));
+
+  DeviceInternRevSpikeInit<<<1,1>>>(d_InternRevSpikeNum, d_InternRevSpikeTarget,
+			      d_InternRevSpikeNConn, num_blocks);
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( cudaDeviceSynchronize() );
 
