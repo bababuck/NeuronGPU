@@ -24,7 +24,7 @@ class NeuronGPU;
 
 class BaseNeuron
 {
- protected:
+ public:
   friend class NeuronGPU;
   int node_type_;
   bool ext_neuron_flag_;
@@ -48,6 +48,7 @@ class BaseNeuron
   int port_weight_arr_step_;
   int port_weight_port_step_;
   float *port_input_arr_;
+  double *intern_get_spike_array_;
   int port_input_arr_step_;
   int port_input_port_step_;
   std::vector<int*> int_var_pt_; 

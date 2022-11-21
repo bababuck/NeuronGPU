@@ -145,6 +145,7 @@ int BaseNeuron::Init(int i_node_0, int n_node, int n_port,
 int BaseNeuron::AllocVarArr()
 {
   gpuErrchk(cudaMalloc(&var_arr_, n_node_*n_var_*sizeof(float)));
+  gpuErrchk(cudaMalloc(&intern_get_spike_array_, n_node_*n_port_*sizeof(double)));
   return 0;
 }
 

@@ -42,6 +42,7 @@ int NeuronGPU::NodeGroupArrayInit()
     ngs.n_port_ = node_vect_[i]->n_port_;
     ngs.n_param_ = node_vect_[i]->n_param_;
     ngs.get_spike_array_ = node_vect_[i]->get_spike_array_;
+    ngs.intern_get_spike_array_ = node_vect_[i]->intern_get_spike_array_;
 
     ngs.spike_count_ = node_vect_[i]->spike_count_;
     ngs.rec_spike_times_ = node_vect_[i]->rec_spike_times_;

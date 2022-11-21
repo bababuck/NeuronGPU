@@ -24,16 +24,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "getRealTime.h"
 //
 
+#define NUM_BLOCKS 30
+
 //////////////////////////////////////////////////////////////////////
 // declare here the functions called by the nested loop 
-__device__ void NestedLoopFunction0(int ix, int iy);
-__device__ void NestedLoopFunction1(int ix, int iy);
+__device__ void NestedLoopFunction0(int ix, int iy, bool all_connections, int _it);
+__device__ void NestedLoopFunction1(int ix, int iy, bool all_connections, int _it);
 //////////////////////////////////////////////////////////////////////
 
 namespace NestedLoop
 {
   PrefixScan prefix_scan_;
   int *d_Ny_cumul_sum_;   
+}
+
+__constant__ int *d_intern_Ny_cumul_sum_[30];
+
+__device__
+void simple_scan(int *out, int *data, int length)
+{
+  if (!threadIdx.x) {
+    out[0] = 0;
+    for (int i=1;i<length;++i) {
+      out[i] = data[i-1] + out[i-1];
+    }
+  }
+  __syncthreads();
+  return;
 }
 
 __device__ int locate(int val, int *data, int n)
@@ -51,6 +68,19 @@ __device__ int locate(int val, int *data, int n)
   return i;
 }
 
+__device__ void InternCumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
+					        int Ny_sum, int _it)
+{
+  int stride = blockDim.x;
+  for (int array_idx=threadIdx.x;array_idx<Ny_sum;array_idx+=stride) {
+    if (array_idx<Ny_sum) {
+      int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
+      int iy = (int)(array_idx - Ny_cumul_sum[ix]);
+      NestedLoopFunction0(ix, iy, false, _it);
+    }
+  }
+}
+
 __global__ void CumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
 					 int Ny_sum)
 {
@@ -59,7 +89,20 @@ __global__ void CumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
   if (array_idx<Ny_sum) {
     int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
     int iy = (int)(array_idx - Ny_cumul_sum[ix]);
-    NestedLoopFunction0(ix, iy);
+    NestedLoopFunction0(ix, iy, true, 0);
+  }
+}
+
+__device__ void InternCumulSumNestedLoopKernel1(int Nx, int *Ny_cumul_sum,
+		    			        int Ny_sum, int _it)
+{
+  int stride = blockDim.x;
+  for (int array_idx=threadIdx.x;array_idx<Ny_sum;array_idx+=stride) {
+    if (array_idx<Ny_sum) {
+      int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
+      int iy = (int)(array_idx - Ny_cumul_sum[ix]);
+      NestedLoopFunction1(ix, iy, false, _it);
+    }
   }
 }
 
@@ -71,7 +114,7 @@ __global__ void CumulSumNestedLoopKernel1(int Nx, int *Ny_cumul_sum,
   if (array_idx<Ny_sum) {
     int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
     int iy = (int)(array_idx - Ny_cumul_sum[ix]);
-    NestedLoopFunction1(ix, iy);
+    NestedLoopFunction1(ix, iy, true, 0);
   }
 }
 
@@ -81,47 +124,64 @@ int NestedLoop::Init()
   //prefix_scan_.Init();
   gpuErrchk(cudaMalloc(&d_Ny_cumul_sum_,
 			  PrefixScan::AllocSize*sizeof(int)));
-  
+
+  int ** temp;
+  temp = new int*[NUM_BLOCKS];
+  for (int i=0;i<NUM_BLOCKS;i++){
+     gpuErrchk(cudaMalloc(&temp[i],
+                          PrefixScan::AllocSize*sizeof(int)));
+  }
+  cudaMemcpyToSymbol(d_intern_Ny_cumul_sum_, temp, NUM_BLOCKS*sizeof(int*));
   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////
+__device__
+int NestedLoop::InternRun(int Nx, int *d_Ny, int i_func, int _it)
+{
+  return InternCumulSumNestedLoop(Nx, d_Ny, i_func, _it);
+}
+
 int NestedLoop::Run(int Nx, int *d_Ny, int i_func)
 {
   return CumulSumNestedLoop(Nx, d_Ny, i_func);
 }
 
-
 //////////////////////////////////////////////////////////////////////
+__device__
+int NestedLoop::InternCumulSumNestedLoop(int Nx, int *d_Ny, int i_func, int _it)
+{
+  simple_scan(d_intern_Ny_cumul_sum_[blockIdx.x], d_Ny, Nx+1);
+
+  int Ny_sum = d_intern_Ny_cumul_sum_[blockIdx.x][Nx];
+
+  ////
+  if(Ny_sum>0) {
+    switch (i_func) {
+    case 0:
+      InternCumulSumNestedLoopKernel0
+	(Nx, d_intern_Ny_cumul_sum_[blockIdx.x], Ny_sum, _it);
+      __syncthreads();
+      break;
+    case 1:
+      InternCumulSumNestedLoopKernel1
+	(Nx, d_intern_Ny_cumul_sum_[blockIdx.x], Ny_sum, _it);
+      __syncthreads();
+      break;
+    }
+  }
+    
+  return 0;
+}
+
 int NestedLoop::CumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
 {
-  //TMP
-  //double time_mark=getRealTime();
-  //
   prefix_scan_.Scan(d_Ny_cumul_sum_, d_Ny, Nx+1);
-  //TMP
-  //printf("pst: %lf\n", getRealTime()-time_mark);
-  //	 
+
   int Ny_sum;
   gpuErrchk(cudaMemcpy(&Ny_sum, &d_Ny_cumul_sum_[Nx],
 			  sizeof(int), cudaMemcpyDeviceToHost));
 
-  //printf("CSNL: %d %d\n", Nx, Ny_sum);
-  
-  //printf("Ny_sum %u\n", Ny_sum);
-  //temporary - remove
-  /*
-  if (Ny_sum==0) {
-    printf("Nx %d\n", Nx);
-    for (int i=0; i<Nx+1; i++) {
-      int psum;
-      gpuErrchk(cudaMemcpy(&psum, &d_Ny_cumul_sum_[i],
-  			      sizeof(int), cudaMemcpyDeviceToHost));
-      printf("%d %d\n", i, psum);
-    }
-  }
-  */    
-  ////
   if(Ny_sum>0) {
     int grid_dim_x, grid_dim_y;
     if (Ny_sum<65536*1024) { // max grid dim * max block dim
@@ -138,9 +198,6 @@ int NestedLoop::CumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
       grid_dim_y = (Ny_sum + grid_dim_x*1024 -1) / (grid_dim_x*1024);
     }
     dim3 numBlocks(grid_dim_x, grid_dim_y);
-    //TMP
-    //double time_mark=getRealTime();
-    //
     switch (i_func) {
     case 0:
       CumulSumNestedLoopKernel0<<<numBlocks, 1024>>>
@@ -157,12 +214,6 @@ int NestedLoop::CumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
     default:
       throw ngpu_exception("unknown nested loop function");
     }
-
-    //TMP
-    //printf("cst: %lf\n", getRealTime()-time_mark);
-    //
   }
-    
   return 0;
 }
-

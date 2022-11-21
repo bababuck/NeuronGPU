@@ -194,6 +194,7 @@ class Network:
                 self.data_path, 'spike_detector',
                 firing_rates_interval[0], firing_rates_interval[1])
             helpers.boxplot(self.data_path, self.net_dict['populations'])
+            helpers.histplot(self.data_path, self.net_dict['populations'])
 
     def __derive_parameters(self):
         """

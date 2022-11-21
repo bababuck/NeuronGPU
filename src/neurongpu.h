@@ -152,6 +152,7 @@ class NeuronGPU
   double *InitGetSpikeArray(int n_node, int n_port);
   int NodeGroupArrayInit();
   int ClearGetSpikeArrays();
+  int InternClearGetSpikeArraysTest(int n_nodes);
   int FreeGetSpikeArrays();
   int FreeNodeGroupMap();
 
@@ -294,7 +295,7 @@ class NeuronGPU
   int SetIntParam(std::string param_name, int val);
 
   NodeSeq Create(std::string model_name, int n_neuron=1, int n_port=1);
-  NodeSeq CreatePoissonGenerator(int n_node, float rate);
+  NodeSeq CreatePoissonGenerator(int n_node, float rrate);
   RemoteNodeSeq RemoteCreate(int i_host, std::string model_name,
 			     int n_node=1, int n_port=1);
 
@@ -458,6 +459,10 @@ class NeuronGPU
   int StartSimulation();
 
   int SimulationStep();
+
+  int NewInternSimulationStep();
+  
+  int OriginalSimulationStep();
 
   int EndSimulation();
   
