@@ -49,6 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define THREAD_MAXNUM 1
 #define THREAD_IDX 0
 #endif
+#define NUM_BLOCKS 30
 
 				    //#define VERBOSE_TIME
 
@@ -303,7 +304,7 @@ int NeuronGPU::Calibrate()
   		 * net_connection_->MaxDelayNum());
   max_spike_per_host_ = (max_spike_per_host_>1) ? max_spike_per_host_ : 1;
   
-  SpikeInit(max_spike_num_);
+  SpikeInit(max_spike_num_, NUM_BLOCKS);
   SpikeBufferInit(net_connection_, max_spike_buffer_size_);
 
 #ifdef HAVE_MPI
