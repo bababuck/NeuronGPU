@@ -122,7 +122,15 @@ __global__ void RevSpikeReset()
 {
   *RevSpikeNum = 0;
 }
-  
+
+__device__ void InternRevSpikeReset()
+{
+  if (!(threadIdx.x ||
+        threadIdx.y)) {
+    InternRevSpikeNum[blockIdx.x] = 0;
+  }
+}
+
 
 int ResetConnectionSpikeTimeUp(NetConnection *net_connection)
 {  

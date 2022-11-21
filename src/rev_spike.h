@@ -21,6 +21,8 @@ extern int *d_RevSpikeNConn;
 
 __global__ void RevSpikeReset();
 
+__device__ void InternRevSpikeReset()
+
 __global__ void RevSpikeBufferUpdate(unsigned int n_node);
 
 int RevSpikeInit(NetConnection *net_connection);
