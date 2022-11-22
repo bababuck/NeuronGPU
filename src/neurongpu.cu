@@ -349,6 +349,7 @@ int NeuronGPU::Simulate()
       printf("%.3lf\n", neural_time_);
     }
     SimulationStep();
+    gpuErrchk( cudaDeviceSynchronize() );
   }
   EndSimulation();
 
@@ -461,7 +462,7 @@ int NeuronGPU::SimulationStep()
   time_mark = getRealTime();
   SpikeBufferUpdate();
   gpuErrchk( cudaPeekAtLastError() );
-  gpuErrchk( cudaDeviceSynchronize() );
+  gpuErrchk( __syncthreads() );
   SpikeBufferUpdate_time_ += (getRealTime() - time_mark);
   time_mark = getRealTime();
   if (n_poiss_node_>0) {
@@ -487,7 +488,7 @@ int NeuronGPU::SimulationStep()
     node_vect_[i]->Update(it_, neural_time_);
   }
   gpuErrchk( cudaPeekAtLastError() );
-  gpuErrchk( cudaDeviceSynchronize() );
+  gpuErrchk( __syncthreads() );
   
   neuron_Update_time_ += (getRealTime() - time_mark);
   multimeter_->WriteRecords(neural_time_);
@@ -529,30 +530,28 @@ int NeuronGPU::SimulationStep()
 	 node_vect_[i]->port_input_arr_,
 	 node_vect_[i]->port_input_arr_step_,
 	 node_vect_[i]->port_input_port_step_);
-      // gpuErrchk( cudaPeekAtLastError() );
-      // gpuErrchk( cudaDeviceSynchronize() );
     }
   }
   gpuErrchk( cudaPeekAtLastError() );
-  gpuErrchk( cudaDeviceSynchronize() );
+  gpuErrchk( __syncthreads() );
 
   GetSpike_time_ += (getRealTime() - time_mark);
 
   time_mark = getRealTime();
   SpikeReset<<<1, 1>>>();
   gpuErrchk( cudaPeekAtLastError() );
-  gpuErrchk( cudaDeviceSynchronize() );
+  gpuErrchk(  );
   SpikeReset_time_ += (getRealTime() - time_mark);
 
   if (net_connection_->NRevConnections()>0) {
     //time_mark = getRealTime();
     RevSpikeReset<<<1, 1>>>();
     gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
+    gpuErrchk( __syncthreads() );
     RevSpikeBufferUpdate<<<(net_connection_->connection_.size()+1023)/1024,
       1024>>>(net_connection_->connection_.size());
     gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
+    gpuErrchk(  );
     unsigned int n_rev_spikes;
     gpuErrchk(cudaMemcpy(&n_rev_spikes, d_RevSpikeNum, sizeof(unsigned int),
 			 cudaMemcpyDeviceToHost));
