@@ -483,7 +483,7 @@ int NeuronGPU::SimulationStep()
     }
   }
     
-  for (unsigned int i=0; i<node_vect_.size(); i++) {
+  for (unsigned int i=blockIdx.x * *nodes_per_block; i<((blockIdx.x + 1) * *nodes_per_block); i++) {
     node_vect_[i]->Update(it_, neural_time_);
   }
   gpuErrchk( cudaPeekAtLastError() );
