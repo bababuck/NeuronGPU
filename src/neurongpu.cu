@@ -464,25 +464,12 @@ int NeuronGPU::SimulationStep()
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( __syncthreads() );
   SpikeBufferUpdate_time_ += (getRealTime() - time_mark);
-  time_mark = getRealTime();
-  if (n_poiss_node_>0) {
-    poiss_generator_->Update(Nt_-it_);
-    poisson_generator_time_ += (getRealTime() - time_mark);
-  }
+
   time_mark = getRealTime();
   neural_time_ = neur_t0_ + (double)time_resolution_*(it_+1);
   gpuErrchk(cudaMemcpyToSymbol(NeuronGPUTime, &neural_time_, sizeof(double)));
   long long time_idx = (int)round(neur_t0_/time_resolution_) + it_ + 1;
   gpuErrchk(cudaMemcpyToSymbol(NeuronGPUTimeIdx, &time_idx, sizeof(long long)));
-
-  if (ConnectionSpikeTimeFlag) {
-    if ( (time_idx & 0xffff) == 0x8000) {
-      ResetConnectionSpikeTimeUp(net_connection_);
-    }
-    else if ( (time_idx & 0xffff) == 0) {
-      ResetConnectionSpikeTimeDown(net_connection_);
-    }
-  }
     
   for (unsigned int i=blockIdx.x * *nodes_per_block; i<((blockIdx.x + 1) * *nodes_per_block); i++) {
     node_vect_[i]->Update(it_, neural_time_);
