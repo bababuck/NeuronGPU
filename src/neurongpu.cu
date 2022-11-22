@@ -491,39 +491,6 @@ int NeuronGPU::SimulationStep()
   
   neuron_Update_time_ += (getRealTime() - time_mark);
   multimeter_->WriteRecords(neural_time_);
-
-#ifdef HAVE_MPI
-  if (mpi_flag_) {
-    int n_ext_spike;
-    time_mark = getRealTime();
-    gpuErrchk(cudaMemcpy(&n_ext_spike, d_ExternalSpikeNum, sizeof(int),
-			 cudaMemcpyDeviceToHost));
-    copy_ext_spike_time_ += (getRealTime() - time_mark);
-
-    if (n_ext_spike != 0) {
-      time_mark = getRealTime();
-      SendExternalSpike<<<(n_ext_spike+1023)/1024, 1024>>>();
-      gpuErrchk( cudaPeekAtLastError() );
-      gpuErrchk( cudaDeviceSynchronize() );
-      SendExternalSpike_time_ += (getRealTime() - time_mark);
-    }
-    //for (int ih=0; ih<connect_mpi_->mpi_np_; ih++) {
-    //if (ih == connect_mpi_->mpi_id_) {
-    time_mark = getRealTime();
-    connect_mpi_->SendSpikeToRemote(connect_mpi_->mpi_np_,
-				    max_spike_per_host_);
-    SendSpikeToRemote_time_ += (getRealTime() - time_mark);
-    time_mark = getRealTime();
-    connect_mpi_->RecvSpikeFromRemote(connect_mpi_->mpi_np_,
-				      max_spike_per_host_);
-				      
-    RecvSpikeFromRemote_time_ += (getRealTime() - time_mark);
-    connect_mpi_->CopySpikeFromRemote(connect_mpi_->mpi_np_,
-				      max_spike_per_host_,
-				      i_remote_node_0_);
-    MPI_Barrier(MPI_COMM_WORLD);
-  }
-#endif
     
   int n_spikes;
   time_mark = getRealTime();
@@ -576,16 +543,6 @@ int NeuronGPU::SimulationStep()
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( cudaDeviceSynchronize() );
   SpikeReset_time_ += (getRealTime() - time_mark);
-
-#ifdef HAVE_MPI
-  if (mpi_flag_) {
-    time_mark = getRealTime();
-    ExternalSpikeReset<<<1, 1>>>();
-    gpuErrchk( cudaPeekAtLastError() );
-    gpuErrchk( cudaDeviceSynchronize() );
-    ExternalSpikeReset_time_ += (getRealTime() - time_mark);
-  }
-#endif
 
   if (net_connection_->NRevConnections()>0) {
     //time_mark = getRealTime();
