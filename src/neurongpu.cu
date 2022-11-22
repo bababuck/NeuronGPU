@@ -459,8 +459,7 @@ int NeuronGPU::SimulationStep()
 
   for (int internal_loop=0;internal_loop<GroupResolution;++internal_loop){
   time_mark = getRealTime();
-  SpikeBufferUpdate<<<(net_connection_->connection_.size()+1023)/1024,
-    1024>>>();
+  SpikeBufferUpdate();
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( cudaDeviceSynchronize() );
   SpikeBufferUpdate_time_ += (getRealTime() - time_mark);
