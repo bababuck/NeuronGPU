@@ -480,13 +480,10 @@ int NeuronGPU::SimulationStep()
   neuron_Update_time_ += (getRealTime() - time_mark);
   multimeter_->WriteRecords(neural_time_);
     
-  int n_spikes;
   time_mark = getRealTime();
-  gpuErrchk(cudaMemcpy(&n_spikes, d_SpikeNum, sizeof(int),
-		       cudaMemcpyDeviceToHost));
 
   ClearGetSpikeArrays();    
-  if (n_spikes > 0) {
+  if (d_InternSpikeNum[blockIdx.x] > 0) {
     time_mark = getRealTime();
     NestedLoop::Run(n_spikes, d_SpikeTargetNum, 0);
     NestedLoop_time_ += (getRealTime() - time_mark);
