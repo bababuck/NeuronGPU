@@ -457,6 +457,7 @@ int NeuronGPU::SimulationStep()
   }
   double time_mark;
 
+  for (int internal_loop=0;internal_loop<GroupResolution;++internal_loop){
   time_mark = getRealTime();
   SpikeBufferUpdate<<<(net_connection_->connection_.size()+1023)/1024,
     1024>>>();
@@ -562,7 +563,7 @@ int NeuronGPU::SimulationStep()
     //RevSpikeBufferUpdate_time_ += (getRealTime() - time_mark);
   }
   it_++;
-  
+  }
   return 0;
 }
 
