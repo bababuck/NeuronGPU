@@ -230,11 +230,14 @@ __device__ void PushSpike(int i_spike_buffer, float height)
 ////////////////////////////////////////////////////////////
 // Update spike buffer of a node
 ////////////////////////////////////////////////////////////
-__global__ void SpikeBufferUpdate()
+__device__ void SpikeBufferUpdate()
 {
-  int i_spike_buffer = threadIdx.x + blockIdx.x * blockDim.x;
-  if (i_spike_buffer>=*NSpikeBuffer) return;
-
+  int node_idx = threadIdx.x;
+  int stride = blockDim.x;
+  for (;node_idx < nodes_per_block; node_idx += stride){
+  int i_spike_buffer = node_idx + nodes_per_block * blockIdx.x;
+  if (i_spike_buffer>=NSpikeBuffer) return;
+  
   int i_group=NodeGroupMap[i_spike_buffer];
   int den_delay_idx;
   float *den_delay_arr = NodeGroupArray[i_group].den_delay_arr_;
@@ -298,6 +301,7 @@ __global__ void SpikeBufferUpdate()
 
   if (rev_spike) {
     LastRevSpikeTimeIdx[i_spike_buffer] = NeuronGPUTimeIdx+1;
+  }
   }
 }
 
