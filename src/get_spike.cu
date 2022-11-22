@@ -45,14 +45,29 @@ __device__ double atomicAddDouble(double* address, double val)
 //////////////////////////////////////////////////////////////////////
 // This is the function called by the nested loop
 // that collects the spikes
-__device__ void NestedLoopFunction0(int i_spike, int i_syn)
+__device__ void NestedLoopFunction0(int i_spike, int i_syn, bool all_connections)
 {
-  int i_source = SpikeSourceIdx[i_spike];
-  int i_conn = SpikeConnIdx[i_spike];
-  float height = SpikeHeight[i_spike];
+  int i_source;
+  int i_conn;
+  float height;
+  if (all_connections) {
+     i_source = SpikeSourceIdx[i_spike];
+     i_conn = SpikeConnIdx[i_spike];
+     height = SpikeHeight[i_spike];
+  } else {
+     i_source = InterSpikeSourceIdx[i_spike];
+     i_conn = InternSpikeConnIdx[i_spike];
+     height = InternSpikeHeight[i_spike];
+  }
   unsigned int target_port
     = ConnectionGroupTargetNode[i_conn*NSpikeBuffer + i_source][i_syn];
   int i_target = target_port & PORT_MASK;
+  if (!all_connections &&
+      (i_target < (blockIdx.x * *nodes_per_block) ||
+       i_target >= ((blockIdx.x + 1) * *nodes_per_block))) return;
+  if (all_connections &&
+      (i_target >= (blockIdx.x * *nodes_per_block) &&
+       i_target < ((blockIdx.x + 1) * *nodes_per_block))) return;
   unsigned char port = (unsigned char)(target_port >> (PORT_N_SHIFT + 24));
   unsigned char syn_group
     = ConnectionGroupTargetSynGroup[i_conn*NSpikeBuffer + i_source][i_syn];
