@@ -449,7 +449,7 @@ int NeuronGPU::EndSimulation()
   return 0;
 }
 
-
+__global__
 int NeuronGPU::SimulationStep()
 {
   if (first_simulation_flag_) {
