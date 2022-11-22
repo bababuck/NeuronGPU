@@ -45,9 +45,14 @@ __device__ int *InternRevSpikeNConn;
 //////////////////////////////////////////////////////////////////////
 // This is the function called by the nested loop
 // that makes use of positive post-pre spike time difference
-__device__ void NestedLoopFunction1(int i_spike, int i_target_rev_conn)
+__device__ void NestedLoopFunction1(int i_spike, int i_target_rev_conn, bool all_connections)
 {
-  unsigned int target = RevSpikeTarget[i_spike];
+  unsigned int target;
+  if (all_connections) {
+    target = RevSpikeTarget[i_spike];
+  } else {
+    target = InternRevSpikeTarget[i_spike];
+  }
   unsigned int i_conn = TargetRevConnection[target][i_target_rev_conn];
   unsigned char syn_group = ConnectionSynGroup[i_conn];
   if (syn_group>0) {
