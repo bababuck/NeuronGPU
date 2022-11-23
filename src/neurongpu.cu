@@ -484,10 +484,15 @@ int NeuronGPU::SimulationStep()
 
   ClearGetSpikeArrays();    
   if (d_InternSpikeNum[blockIdx.x] > 0) {
-    time_mark = getRealTime();
-    NestedLoop::Run(n_spikes, d_InternSpikeTargetNum[blockIdx.x], 0);
-    NestedLoop_time_ += (getRealTime() - time_mark);
+    if (threadIdx.x == 0) {
+      time_mark = getRealTime();    
+      NestedLoop::Run(n_spikes, d_InternSpikeTargetNum[blockIdx.x], 0);
+      NestedLoop_time_ += (getRealTime() - time_mark);
+      gpuErrchk( cudaPeekAtLastError() );
+      gpuErrchk( __syncthreads() );
+    }
   }
+  
   time_mark = getRealTime();
   offset = *neurons_per_group * blockIdx.x;
   for (unsigned int i=offset+threadIdx.x; i<*neurons_per_group+offset; i++) {

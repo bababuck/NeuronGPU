@@ -27,6 +27,7 @@ int PrefixScan::Init()
   return 0;
 }
 
+__device__
 int PrefixScan::Scan(int *d_Output, int *d_Input, int n)
 {
   prefix_scan(d_Output, d_Input, n, true);
