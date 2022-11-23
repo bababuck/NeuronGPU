@@ -489,15 +489,10 @@ int NeuronGPU::SimulationStep()
     NestedLoop_time_ += (getRealTime() - time_mark);
   }
   time_mark = getRealTime();
-  for (unsigned int i=0; i<node_vect_.size(); i++) {
+  offset = *neurons_per_group * blockIdx.x;
+  for (unsigned int i=offset+threadIdx.x; i<*neurons_per_group+offset; i++) {
     if (node_vect_[i]->n_port_>0) {
-
-      int grid_dim_x = (node_vect_[i]->n_node_+1023)/1024;
-      int grid_dim_y = node_vect_[i]->n_port_;
-      dim3 grid_dim(grid_dim_x, grid_dim_y);
-      //dim3 block_dim(1024,1);
-					    
-      GetSpikes<<<grid_dim, 1024>>> //block_dim>>>
+      GetSpikes
 	(node_vect_[i]->get_spike_array_, node_vect_[i]->n_node_,
 	 node_vect_[i]->n_port_,
 	 node_vect_[i]->n_var_,
