@@ -485,7 +485,7 @@ int NeuronGPU::SimulationStep()
   ClearGetSpikeArrays();    
   if (d_InternSpikeNum[blockIdx.x] > 0) {
     time_mark = getRealTime();
-    NestedLoop::Run(n_spikes, d_SpikeTargetNum, 0);
+    NestedLoop::Run(n_spikes, d_SpikeTargetNum[blockIdx.x], 0);
     NestedLoop_time_ += (getRealTime() - time_mark);
   }
   time_mark = getRealTime();
