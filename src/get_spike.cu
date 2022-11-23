@@ -154,10 +154,13 @@ __global__ void GetSpikes(double *spike_array, int array_size, int n_port,
   }
 }
 
-
+__device__
 int NeuronGPU::ClearGetSpikeArrays()
 {
-  for (unsigned int i=0; i<node_vect_.size(); i++) {
+  int stride = threadIdx.x;
+  int start_node = blockIdx.x * *nodes_per_group;
+  int last_node = start_node + *nodes_per_group;
+  for (unsigned int i=start_node; i<last_node; i++) {
     BaseNeuron *bn = node_vect_[i];
     if (bn->get_spike_array_ != NULL) {
       gpuErrchk(cudaMemset(bn->get_spike_array_, 0, bn->n_node_*bn->n_port_
