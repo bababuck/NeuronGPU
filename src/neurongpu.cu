@@ -515,18 +515,17 @@ int NeuronGPU::SimulationStep()
   GetSpike_time_ += (getRealTime() - time_mark);
 
   time_mark = getRealTime();
-  SpikeReset<<<1, 1>>>();
+  InternSpikeReset();
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk(  );
   SpikeReset_time_ += (getRealTime() - time_mark);
 
   if (net_connection_->NRevConnections()>0) {
     //time_mark = getRealTime();
-    RevSpikeReset<<<1, 1>>>();
+    InternRevSpikeReset();
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( __syncthreads() );
-    RevSpikeBufferUpdate<<<(net_connection_->connection_.size()+1023)/1024,
-      1024>>>(net_connection_->connection_.size());
+    RevSpikeBufferUpdate(net_connection_->connection_.size());
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk(  );
     unsigned int n_rev_spikes;
