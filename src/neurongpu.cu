@@ -552,13 +552,13 @@ int NeuronGPU::OriginalSimulationStep() {
 }
 
 __global__
-int NeuronGPU::SimulationStep()
+int NeuronGPU::InternSimulationStep()
 {
   double time_mark;
 
   for (int internal_loop=0;internal_loop<GroupResolution;++internal_loop){
   time_mark = getRealTime();
-  SpikeBufferUpdate();
+  InternSpikeBufferUpdate();
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( __syncthreads() );
   SpikeBufferUpdate_time_ += (getRealTime() - time_mark);
@@ -584,7 +584,7 @@ int NeuronGPU::SimulationStep()
   if (d_InternSpikeNum[blockIdx.x] > 0) {
     if (threadIdx.x == 0) {
       time_mark = getRealTime();    
-      NestedLoop::Run(n_spikes, d_InternSpikeTargetNum[blockIdx.x], 0);
+      NestedLoop::InternRun(n_spikes, d_InternSpikeTargetNum[blockIdx.x], 0);
       NestedLoop_time_ += (getRealTime() - time_mark);
       gpuErrchk( cudaPeekAtLastError() );
       gpuErrchk( __syncthreads() );
@@ -595,7 +595,7 @@ int NeuronGPU::SimulationStep()
   offset = *neurons_per_group * blockIdx.x;
   for (unsigned int i=offset+threadIdx.x; i<*neurons_per_group+offset; i++) {
     if (node_vect_[i]->n_port_>0) {
-      GetSpikes
+      InternGetSpikes
 	(node_vect_[i]->get_spike_array_, node_vect_[i]->n_node_,
 	 node_vect_[i]->n_port_,
 	 node_vect_[i]->n_var_,
@@ -623,14 +623,14 @@ int NeuronGPU::SimulationStep()
     InternRevSpikeReset();
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk( __syncthreads() );
-    RevSpikeBufferUpdate(net_connection_->connection_.size());
+    InternRevSpikeBufferUpdate(net_connection_->connection_.size());
     gpuErrchk( cudaPeekAtLastError() );
     gpuErrchk(  );
     unsigned int n_rev_spikes;
     gpuErrchk(cudaMemcpy(&n_rev_spikes, d_RevSpikeNum, sizeof(unsigned int),
 			 cudaMemcpyDeviceToHost));
     if (n_rev_spikes > 0) {
-      NestedLoop::Run(n_rev_spikes, d_RevSpikeNConn, 1);
+      NestedLoop::InternRun(n_rev_spikes, d_RevSpikeNConn, 1);
     }      
     //RevSpikeBufferUpdate_time_ += (getRealTime() - time_mark);
   }

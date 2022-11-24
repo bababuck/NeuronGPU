@@ -102,7 +102,7 @@ extern __device__ unsigned int **TargetRevConnection;
 
 __device__ void PushSpike(int i_spike_buffer, float height);
 
-__device__ void SpikeBufferUpdate();
+__device__ void InternSpikeBufferUpdate();
 
 __global__ void SpikeBufferUpdate();
 

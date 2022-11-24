@@ -51,8 +51,8 @@ __device__ int locate(int val, int *data, int n)
   return i;
 }
 
-__device__ void CumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
-					 int Ny_sum)
+__device__ void InternCumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
+					        int Ny_sum)
 {
   int stride = blockDim.x;
   for (int array_idx=threadIdx.x;i<Ny_sum;array_idx+=stride) {
@@ -76,8 +76,8 @@ __global__ void CumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
   }
 }
 
-__device__ void CumulSumNestedLoopKernel1(int Nx, int *Ny_cumul_sum,
-					 int Ny_sum)
+__device__ void InternCumulSumNestedLoopKernel1(int Nx, int *Ny_cumul_sum,
+		    			        int Ny_sum)
 {
   int stride = blockDim.x;
   for (int array_idx=threadIdx.x;i<Ny_sum;array_idx+=stride) {
@@ -113,9 +113,9 @@ int NestedLoop::Init()
 
 //////////////////////////////////////////////////////////////////////
 __device__
-int NestedLoop::Run(int Nx, int *d_Ny, int i_func)
+int InternNestedLoop::Run(int Nx, int *d_Ny, int i_func)
 {
-  return CumulSumNestedLoop(Nx, d_Ny, i_func);
+  return InternCumulSumNestedLoop(Nx, d_Ny, i_func);
 }
 
 int NestedLoop::Run(int Nx, int *d_Ny, int i_func)
@@ -125,7 +125,7 @@ int NestedLoop::Run(int Nx, int *d_Ny, int i_func)
 
 //////////////////////////////////////////////////////////////////////
 __device__
-int NestedLoop::CumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
+int NestedLoop::InternCumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
 {
   simple_scan(d_Ny_cumul_sum_, d_Ny, Nx+1);
 
@@ -137,13 +137,13 @@ int NestedLoop::CumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
   if(Ny_sum>0) {
     switch (i_func) {
     case 0:
-      CumulSumNestedLoopKernel0
+      InternCumulSumNestedLoopKernel0
 	(Nx, d_Ny_cumul_sum_, Ny_sum);
       gpuErrchk(cudaPeekAtLastError());
       gpuErrchk(cudaDeviceSynchronize());
       break;
     case 1:
-      CumulSumNestedLoopKernel1
+      InternCumulSumNestedLoopKernel1
 	(Nx, d_Ny_cumul_sum_, Ny_sum);
       gpuErrchk(cudaPeekAtLastError());
       gpuErrchk(cudaDeviceSynchronize());

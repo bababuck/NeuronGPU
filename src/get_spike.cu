@@ -154,7 +154,7 @@ __global__ void GetSpikes(double *spike_array, int array_size, int n_port,
   }
 }
 
-__device__ void GetSpikes(double *spike_array, int array_size, int n_port,
+__device__ void InternGetSpikes(double *spike_array, int array_size, int n_port,
 			  int n_var,
 			  float *port_weight_arr,
 			  int port_weight_arr_step,

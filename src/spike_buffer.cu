@@ -230,7 +230,7 @@ __device__ void PushSpike(int i_spike_buffer, float height)
 ////////////////////////////////////////////////////////////
 // Update spike buffer of a node
 ////////////////////////////////////////////////////////////
-__device__ void SpikeBufferUpdate()
+__device__ void InternSpikeBufferUpdate()
 {
   int node_idx = threadIdx.x;
   int stride = blockDim.x;

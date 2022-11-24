@@ -458,8 +458,6 @@ class NeuronGPU
   int StartSimulation();
 
   int SimulationStep();
-  __global__ int SimulationStep();
-  int OriginalSimulationStep();
 
   int EndSimulation();
   

@@ -85,7 +85,7 @@ __global__ void RevSpikeBufferUpdate(unsigned int n_node)
   }
 }
 
-__device__ void RevSpikeBufferUpdate(unsigned int n_node)
+__device__ void InternRevSpikeBufferUpdate(unsigned int n_node)
 {
   unsigned int offset = *neurons_per_group * blockIdx.x;
   for (unsigned int i_node = threadIdx.x + offset; i_node<n_node && i_node < *neurons_per_group; i+=blockDim.x) { 
