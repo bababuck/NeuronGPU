@@ -67,22 +67,21 @@ __device__ void NestedLoopFunction1(int i_spike, int i_target_rev_conn, bool all
 }
 	    
 
-__global__ void RevSpikeBufferUpdate(unsigned int n_node)
+__device__ void RevSpikeBufferUpdate(unsigned int n_node)
 {
-  unsigned int i_node = threadIdx.x + blockIdx.x * blockDim.x;
-  if (i_node >= n_node) {
-    return;
-  }
-  long long target_spike_time_idx = LastRevSpikeTimeIdx[i_node];
-  // Check if a spike reached the input synapses now
-  if (target_spike_time_idx!=NeuronGPUTimeIdx) {
-    return;
-  }
-  int n_conn = TargetRevConnectionSize[i_node];
-  if (n_conn>0) {
-    unsigned int pos = atomicAdd(RevSpikeNum, 1);
-    RevSpikeTarget[pos] = i_node;
-    RevSpikeNConn[pos] = n_conn;
+  unsigned int offset = *neurons_per_group * blockIdx.x;
+  for (unsigned int i_node = threadIdx.x + offset; i_node<n_node && i_node < *neurons_per_group; i+=blockDim.x) { 
+    long long target_spike_time_idx = LastRevSpikeTimeIdx[i_node];
+    // Check if a spike reached the input synapses now
+    if (target_spike_time_idx!=NeuronGPUTimeIdx) {
+      return;
+    }
+    int n_conn = TargetRevConnectionSize[i_node];
+    if (n_conn>0) {
+      unsigned int pos = atomicAdd(InternRevSpikeNum, 1);
+      InternRevSpikeTarget[pos] = i_node;
+      InternRevSpikeNConn[pos] = n_conn;
+    }
   }
 }
 
