@@ -66,6 +66,24 @@ __device__ void NestedLoopFunction1(int i_spike, int i_target_rev_conn, bool all
   }
 }
 	    
+__global__ void RevSpikeBufferUpdate(unsigned int n_node)
+{
+  unsigned int i_node = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i_node >= n_node) {
+    return;
+  }
+  long long target_spike_time_idx = LastRevSpikeTimeIdx[i_node];
+  // Check if a spike reached the input synapses now
+  if (target_spike_time_idx!=NeuronGPUTimeIdx) {
+    return;
+  }
+  int n_conn = TargetRevConnectionSize[i_node];
+  if (n_conn>0) {
+    unsigned int pos = atomicAdd(RevSpikeNum, 1);
+    RevSpikeTarget[pos] = i_node;
+    RevSpikeNConn[pos] = n_conn;
+  }
+}
 
 __device__ void RevSpikeBufferUpdate(unsigned int n_node)
 {
