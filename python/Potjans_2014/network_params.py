@@ -66,7 +66,7 @@ net_dict = {
     # number of neurons in the different populations (same order as
     # 'populations')
     'full_num_neurons':
-        np.array([20683, 5834, 21915, 5479, 4850, 1065, 14395, 2948]),
+        np.array([2068, 534, 2195, 549, 485, 165, 1439, 294]),
     # mean rates of the different populations in the non-scaled version of the
     # microcircuit (in spikes/s; same order as in 'populations');
     # necessary for the scaling of the network.

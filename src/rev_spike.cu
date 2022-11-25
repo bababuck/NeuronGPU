@@ -212,6 +212,7 @@ int RevSpikeInit(NetConnection *net_connection, int num_blocks)
   DeviceRevSpikeInit<<<1,1>>>(d_RevSpikeNum, d_RevSpikeTarget,
 			      d_RevSpikeNConn);
 
+/*
   unsigned int *d_InternRevSpikeNum, *d_InternRevSpikeTarget;
   int *d_InternRevSpikeNConn;
   gpuErrchk(cudaMalloc(&d_InternRevSpikeNum, num_blocks*sizeof(unsigned int)));
@@ -224,7 +225,7 @@ int RevSpikeInit(NetConnection *net_connection, int num_blocks)
 			      d_InternRevSpikeNConn, num_blocks);
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( cudaDeviceSynchronize() );
-
+*/
   return 0;
 }
 

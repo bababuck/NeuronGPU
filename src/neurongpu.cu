@@ -36,6 +36,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dir_connect.h"
 #include "rev_spike.h"
 #include "spike_mpi.h"
+#include "iaf_psc_exp_g.h"
+
+using namespace iaf_psc_exp_g_ns;
 
 #ifdef HAVE_MPI
 #include <mpi.h>
@@ -53,6 +56,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GroupResolution 10
 				    //#define VERBOSE_TIME
 
+#define I_syn var[i_I_syn]
+#define V_m_rel var[i_V_m_rel]
+#define refractory_step var[i_refractory_step]
+#define I_e param[i_I_e]
+#define tau_m_ group_param_[i_tau_m]
+#define C_m_ group_param_[i_C_m]
+#define E_L_ group_param_[i_E_L]
+#define Theta_rel_ group_param_[i_Theta_rel]
+#define V_reset_rel_ group_param_[i_V_reset_rel]
+#define tau_syn_ group_param_[i_tau_syn]
+#define t_ref_ group_param_[i_t_ref]
+
+
 __constant__ double NeuronGPUTime;
 __constant__ long long NeuronGPUTimeIdx;
 __constant__ float NeuronGPUTimeResolution;
@@ -63,6 +79,8 @@ extern __device__ int *InternRevSpikeNum;
 extern __device__ int *InternRevSpikeNConn;
 extern __device__ int *InternSpikeTargetNum;
 extern __device__ int *InternSpikeNum;
+
+__device__ iaf_psc_exp_g **d_node_vect;
 
 enum KernelFloatParamIndexes {
   i_time_resolution = 0,
@@ -136,7 +154,6 @@ NeuronGPU::NeuronGPU()
 #endif
   
   NestedLoop::Init();
-
   SpikeBufferUpdate_time_ = 0;
   poisson_generator_time_ = 0;
   neuron_Update_time_ = 0;
@@ -148,7 +165,6 @@ NeuronGPU::NeuronGPU()
   GetSpike_time_ = 0;
   SpikeReset_time_ = 0;
   ExternalSpikeReset_time_ = 0;
-  initNodesPerBlock<<<1,1>>>((node_vect_.size()+NUM_BLOCKS-1) / NUM_BLOCKS);
   first_simulation_flag_ = true;
 }
 
@@ -366,6 +382,11 @@ int NeuronGPU::Simulate(float sim_time) {
   return Simulate();
 }
 
+__global__ void initNode(iaf_psc_exp_g *node, int i)
+{
+  d_node_vect[i] = node;
+}
+
 int NeuronGPU::Simulate()
 {
   StartSimulation();
@@ -406,7 +427,16 @@ int NeuronGPU::StartSimulation()
   neur_t0_ = neural_time_;
   it_ = 0;
   Nt_ = (long long)round(sim_time_/time_resolution_);
-  
+ 
+  initNodesPerBlock<<<1,1>>>((node_vect_.size()+NUM_BLOCKS-1) / NUM_BLOCKS);
+  cudaMalloc(&d_node_vect, node_vect_.size()*sizeof(iaf_psc_exp_g));
+  for (int i=0;i<node_vect_.size();++i){
+    iaf_psc_exp_g *temp;
+    cudaMalloc(&temp, sizeof(iaf_psc_exp_g));
+    cudaMemcpy(temp, node_vect_[i], sizeof(iaf_psc_exp_g), cudaMemcpyHostToDevice);
+    initNode<<<1,1>>>(temp, i);
+  }
+
   return 0;
 }
 
@@ -581,6 +611,73 @@ int NeuronGPU::OriginalSimulationStep() {
   return 0;
 }
 
+__device__ double h_intern_propagator_32( double tau_syn, double tau, double C, double h )
+{
+  const double P32_linear = 1.0 / ( 2.0 * C * tau * tau ) * h * h
+    * ( tau_syn - tau ) * exp( -h / tau );
+  const double P32_singular = h / C * exp( -h / tau );
+  const double P32 =
+    -tau / ( C * ( 1.0 - tau / tau_syn ) ) * exp( -h / tau_syn )
+    * expm1( h * ( 1.0 / tau_syn - 1.0 / tau ) );
+
+  const double dev_P32 = fabs( P32 - P32_singular );
+
+  if ( tau == tau_syn || ( fabs( tau - tau_syn ) < 0.1 && dev_P32 > 2.0
+			   * fabs( P32_linear ) ) )
+  {
+    return P32_singular;
+  }
+  else
+  {
+    return P32;
+  }
+}
+
+__device__ void iaf_psc_exp_g_InternUpdate
+( int n_node, int i_node_0, float *var_arr, float *param_arr, int n_var,
+  int n_param, float Theta_rel, float V_reset_rel, int n_refractory_steps,
+  float P11, float P22, float P21, float P20 )
+{
+  for (int i_neuron = threadIdx.x; i_neuron<n_node;i_neuron+=blockDim.x) {
+    float *var = var_arr + n_var*i_neuron;
+    float *param = param_arr + n_param*i_neuron;
+    
+    if ( refractory_step > 0.0 ) {
+      // neuron is absolute refractory
+      refractory_step -= 1.0;
+    }
+    else { // neuron is not refractory, so evolve V
+      V_m_rel = V_m_rel * P22 + I_syn * P21 + I_e * P20;
+    }
+    // exponential decaying PSC
+    I_syn *= P11;
+    
+    if (V_m_rel >= Theta_rel ) { // threshold crossing
+      PushSpike(i_node_0 + i_neuron, 1.0);
+      V_m_rel = V_reset_rel;
+      refractory_step = n_refractory_steps;
+    }    
+  }
+}
+
+__device__ int InternUpdate(long long it, double t1, iaf_psc_exp_g* neuron)
+{
+  // std::cout << "iaf_psc_exp_g neuron update\n";
+  float h = neuron->time_resolution_;
+  float P11 = exp( -h / neuron->tau_syn_ );
+  float P22 = exp( -h / neuron->tau_m_ );
+  float P21 = h_intern_propagator_32( neuron->tau_syn_, neuron->tau_m_, neuron->C_m_, h );
+  float P20 = neuron->tau_m_ / neuron->C_m_ * ( 1.0 - P22 );
+  int n_refractory_steps = int(round(neuron->t_ref_ / h));
+
+  iaf_psc_exp_g_InternUpdate
+    (neuron->n_node_, neuron->i_node_0_, neuron->var_arr_, neuron->param_arr_, neuron->n_var_, neuron->n_param_,
+      neuron->Theta_rel_, neuron->V_reset_rel_, n_refractory_steps, P11, P22, P21, P20 );
+  //gpuErrchk( cudaDeviceSynchronize() );
+  
+  return 0;
+}
+
 __global__
 void InternSimulationStep(int it_, float time_resolution_, double neur_t0_, int conn_size, bool rev_conns)
 {
@@ -588,6 +685,10 @@ void InternSimulationStep(int it_, float time_resolution_, double neur_t0_, int 
   for (int internal_loop=0;internal_loop<GroupResolution;++internal_loop){
   InternSpikeBufferUpdate();
   __syncthreads();
+
+  for (unsigned int i=blockIdx.x * *nodes_per_block; i<((blockIdx.x + 1) * *nodes_per_block); i++) {
+    InternUpdate(it_, 0, d_node_vect[i]);
+  }
 
   if (InternSpikeNum[blockIdx.x] > 0) {
     NestedLoop::InternRun(InternSpikeNum[blockIdx.x], &InternSpikeTargetNum[*nodes_per_block * blockIdx.x], 0);

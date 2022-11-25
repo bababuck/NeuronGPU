@@ -24,7 +24,7 @@ class NeuronGPU;
 
 class BaseNeuron
 {
- protected:
+ public:
   friend class NeuronGPU;
   int node_type_;
   bool ext_neuron_flag_;

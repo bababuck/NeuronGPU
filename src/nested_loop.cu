@@ -122,7 +122,6 @@ int NestedLoop::Init()
   //prefix_scan_.Init();
   gpuErrchk(cudaMalloc(&d_Ny_cumul_sum_,
 			  PrefixScan::AllocSize*sizeof(int)));
-
   for (int i=0;i<30;i++){
      gpuErrchk(cudaMalloc(&d_intern_Ny_cumul_sum_[i],
                           PrefixScan::AllocSize*sizeof(int)));  
