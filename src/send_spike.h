@@ -35,6 +35,8 @@ __device__ int *InternSpikeConnIdx;
 __device__ float *InternSpikeHeight;
 __device__ int *InternSpikeTargetNum;
 
+__device__ int *nodes_per_block;
+
 __global__ void DeviceSpikeInit(int *spike_num, int *spike_source_idx,
 				int *spike_conn_idx, float *spike_height,
 				int *spike_target_num, int max_spike_num);

@@ -335,6 +335,20 @@ int NeuronGPU::Calibrate()
   return 0;
 }
 
+__device__
+int NeuronGPU::InternClearGetSpikeArrays()
+{
+  int start_node = blockIdx.x * *nodes_per_block;
+  int last_node = start_node + *nodes_per_block;
+  for (unsigned int i=start_node; i<last_node; i+=threadIdx.x) {
+    BaseNeuron *bn =node_vect_[i];
+    if (bn->get_spike_array_ != NULL) {
+      gpuErrchk(cudaMemset(bn->get_spike_array_, 0, bn->n_node_*bn->n_port_*sizeof(double)))
+    }
+  }
+  return 0;
+} 
+
 int NeuronGPU::Simulate(float sim_time) {
   sim_time_ = sim_time;
   return Simulate();

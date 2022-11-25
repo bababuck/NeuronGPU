@@ -26,6 +26,8 @@ extern __constant__ float NeuronGPUTimeResolution;
 extern __constant__ NodeGroupStruct NodeGroupArray[];
 extern __device__ signed char *NodeGroupMap;
 
+extern __device__ int* nodes_per_block;
+
 extern __device__ void SynapseUpdate(int syn_group, float *w, float Dt);
 
 __device__ double atomicAddDouble(double* address, double val)
@@ -180,22 +182,6 @@ __device__ void InternGetSpikes(double *spike_array, int array_size, int n_port,
       port_input_arr[port_input] = (float)d_val;
     }
   }
-}
-
-__device__
-int NeuronGPU::InternClearGetSpikeArrays()
-{
-  int start_node = blockIdx.x * *nodes_per_group;
-  int last_node = start_node + *nodes_per_group;
-  for (unsigned int i=start_node; i<last_node; i+=threadIdx.x) {
-    BaseNeuron *bn = node_vect_[i];
-    if (bn->get_spike_array_ != NULL) {
-      gpuErrchk(cudaMemset(bn->get_spike_array_, 0, bn->n_node_*bn->n_port_
-			   *sizeof(double)));
-    }
-  }
-  
-  return 0;
 }
 
 int NeuronGPU::ClearGetSpikeArrays()
