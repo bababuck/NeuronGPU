@@ -561,7 +561,8 @@ int NeuronGPU::InternSimulationStep()
   InternSpikeBufferUpdate();
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( __syncthreads() );
-  SpikeBufferUpdate_time_ += (getRealTime() - time_mark);
+  if (threadIdx.x == 0 && blockIdx.x == 0)
+    SpikeBufferUpdate_time_ += (getRealTime() - time_mark);
 
   time_mark = getRealTime();
   neural_time_ = neur_t0_ + (double)time_resolution_*(it_+1);
@@ -574,8 +575,9 @@ int NeuronGPU::InternSimulationStep()
   }
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( __syncthreads() );
-  
-  neuron_Update_time_ += (getRealTime() - time_mark);
+
+  if (threadIdx.x == 0 && blockIdx.x == 0) 
+    neuron_Update_time_ += (getRealTime() - time_mark);
   multimeter_->WriteRecords(neural_time_);
     
   time_mark = getRealTime();
@@ -585,7 +587,8 @@ int NeuronGPU::InternSimulationStep()
     if (threadIdx.x == 0) {
       time_mark = getRealTime();    
       NestedLoop::InternRun(n_spikes, d_InternSpikeTargetNum[blockIdx.x], 0);
-      NestedLoop_time_ += (getRealTime() - time_mark);
+      if (threadIdx.x == 0 && blockIdx.x == 0) 
+        NestedLoop_time_ += (getRealTime() - time_mark);
       gpuErrchk( cudaPeekAtLastError() );
       gpuErrchk( __syncthreads() );
     }
@@ -610,13 +613,15 @@ int NeuronGPU::InternSimulationStep()
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( __syncthreads() );
 
-  GetSpike_time_ += (getRealTime() - time_mark);
+  if (threadIdx.x == 0 && blockIdx.x == 0)
+    GetSpike_time_ += (getRealTime() - time_mark);
 
   time_mark = getRealTime();
   InternSpikeReset();
   gpuErrchk( cudaPeekAtLastError() );
-  gpuErrchk(  );
-  SpikeReset_time_ += (getRealTime() - time_mark);
+  gpuErrchk( __syncthreads() );
+  if (threadIdx.x == 0 && blockIdx.x == 0) 
+    SpikeReset_time_ += (getRealTime() - time_mark);
 
   if (net_connection_->NRevConnections()>0) {
     //time_mark = getRealTime();

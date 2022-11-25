@@ -152,7 +152,6 @@ class NeuronGPU
   double *InitGetSpikeArray(int n_node, int n_port);
   int NodeGroupArrayInit();
   int ClearGetSpikeArrays();
-  int IntClearGetSpikeArrays();
   int FreeGetSpikeArrays();
   int FreeNodeGroupMap();
 
