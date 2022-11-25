@@ -25,6 +25,7 @@ struct NodeGroupStruct
   int n_port_;
   int n_param_;
   double *get_spike_array_;
+  double *intern_get_spike_array_;
   int *spike_count_;
   float *rec_spike_times_;
   int *n_rec_spike_times_;

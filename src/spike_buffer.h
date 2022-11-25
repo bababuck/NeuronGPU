@@ -100,7 +100,9 @@ extern unsigned int **d_TargetRevConnection; //[i][j] j<=RevConnectionSize[i]-1
 extern __device__ unsigned int **TargetRevConnection;
 
 
-__device__ void PushSpike(int i_spike_buffer, float height);
+__device__ void PushSpike(int i_spike_buffer, float height, int _it=0);
+
+__device__ void InternSpikeBufferUpdate(int _it);
 
 __global__ void SpikeBufferUpdate();
 
@@ -123,8 +125,10 @@ __global__ void DeviceSpikeBufferInit(int n_spike_buffers, int max_delay_num,
 				unsigned int *rev_conn,
 				int *target_rev_conn_size,
 				unsigned int **target_rev_conn,
-				long long *last_rev_spike_time_idx);
-
+				long long *last_rev_spike_time_idx,
+				int *spike_buffer_lock,
+                                int *spike_buffer_front,
+				int *spike_buffer_back);  
 int SpikeBufferInit(NetConnection *net_connection, int max_spike_buffer_size);
 
 #endif

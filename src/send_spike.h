@@ -35,8 +35,13 @@ __global__ void DeviceSpikeInit(int *spike_num, int *spike_source_idx,
 __device__ void SendSpike(int i_source, int i_conn, float height,
 			  int target_num);
 
-void SpikeInit(int max_spike_num);
+__device__ void InternSendSpike(int i_source, int i_conn, float height,
+			  int target_num);
+
+void SpikeInit(int max_spike_num, int num_blocks);
 
 __global__ void SpikeReset();
+
+__device__ void InternSpikeReset();
 
 #endif

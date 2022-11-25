@@ -72,8 +72,8 @@ time_simulate = time.time()
 # The computation of spike rates discards the presimulation time to exclude
 # initialization artifacts.
 
-raster_plot_interval = np.array([stim_dict['th_start'] - 100.0,
-                                 stim_dict['th_start'] + 100.0])
+raster_plot_interval = np.array([2000.0,
+                                 2200.0])
 firing_rates_interval = np.array([sim_dict['t_presim'],
                                   sim_dict['t_presim'] + sim_dict['t_sim']])
 net.evaluate(raster_plot_interval, firing_rates_interval)

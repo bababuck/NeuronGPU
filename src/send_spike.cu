@@ -36,15 +36,18 @@ __device__ int *SpikeConnIdx;
 __device__ float *SpikeHeight;
 __device__ int *SpikeTargetNum;
 
+__device__ int InternMaxSpikeNum;
 __device__ int *InternSpikeNum;
 __device__ int *InternSpikeSourceIdx;
 __device__ int *InternSpikeConnIdx;
 __device__ float *InternSpikeHeight;
 __device__ int *InternSpikeTargetNum;
+__device__ int *nodes_per_block;
 
 __device__ void SendSpike(int i_source, int i_conn, float height,
 			  int target_num)
 {
+//  printf("SPIKED\n");
   int pos = atomicAdd(SpikeNum, 1);
   if (pos>=MaxSpikeNum) {
     printf("Number of spikes larger than MaxSpikeNum: %d\n", MaxSpikeNum);
@@ -55,6 +58,19 @@ __device__ void SendSpike(int i_source, int i_conn, float height,
   SpikeConnIdx[pos] = i_conn;
   SpikeHeight[pos] = height;
   SpikeTargetNum[pos] = target_num;
+
+  pos = atomicAdd(&InternSpikeNum[blockIdx.x], 1);
+  if (pos>=InternMaxSpikeNum) {
+    printf("Number of spikes larger than InternMaxSpikeNum: %d\n", InternMaxSpikeNum);
+    *InternSpikeNum = InternMaxSpikeNum;
+    return;
+  }
+  pos = blockIdx.x * InternMaxSpikeNum + pos;
+  InternSpikeSourceIdx[pos] = i_source;
+  InternSpikeConnIdx[pos] = i_conn;
+  InternSpikeHeight[pos] = height;
+  InternSpikeTargetNum[pos] = target_num;
+
 }
 
 __global__ void DeviceSpikeInit(int *spike_num, int *spike_source_idx,
@@ -98,10 +114,10 @@ void SpikeInit(int max_spike_num, int num_blocks)
   gpuErrchk(cudaMalloc(&d_SpikeTargetNum, max_spike_num*sizeof(int)));
 
   gpuErrchk(cudaMalloc(&d_InternSpikeNum, sizeof(int)*num_blocks));
-  gpuErrchk(cudaMalloc(&d_InternSpikeSourceIdx, max_spike_num*sizeof(int)));
-  gpuErrchk(cudaMalloc(&d_InternSpikeConnIdx, max_spike_num*sizeof(int)));
-  gpuErrchk(cudaMalloc(&d_InternSpikeHeight, max_spike_num*sizeof(float)));
-  gpuErrchk(cudaMalloc(&d_InternSpikeTargetNum, max_spike_num*sizeof(int)));
+  gpuErrchk(cudaMalloc(&d_InternSpikeSourceIdx, max_spike_num*sizeof(int)*num_blocks));
+  gpuErrchk(cudaMalloc(&d_InternSpikeConnIdx, max_spike_num*sizeof(int)*num_blocks));
+  gpuErrchk(cudaMalloc(&d_InternSpikeHeight, max_spike_num*sizeof(float)*num_blocks));
+  gpuErrchk(cudaMalloc(&d_InternSpikeTargetNum, max_spike_num*sizeof(int)*num_blocks));
   
   //printf("here: SpikeTargetNum size: %d", max_spike_num);
   DeviceSpikeInit<<<1,1>>>(d_SpikeNum, d_SpikeSourceIdx, d_SpikeConnIdx,
@@ -116,4 +132,12 @@ void SpikeInit(int max_spike_num, int num_blocks)
 __global__ void SpikeReset()
 {
   *SpikeNum = 0;
+}
+
+__device__ void InternSpikeReset()
+{
+  if (!(threadIdx.x ||
+        threadIdx.y)) {
+    InternSpikeNum[blockIdx.x] = 0;
+  }
 }

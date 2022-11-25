@@ -65,6 +65,7 @@ __global__ void PoissGenSendSpikeKernel(curandState *curand_state, double t,
 	int i_group=NodeGroupMap[i_target];
 	int i = port*NodeGroupArray[i_group].n_node_ + i_target
 	  - NodeGroupArray[i_group].i_node_0_;
+	printf("%d\n",NodeGroupArray[i_group].i_node_0_);
 	double d_val = (double)(weight*n);
 	atomicAddDouble(&NodeGroupArray[i_group].get_spike_array_[i], d_val); 
 	////////////////////////////////////////////////////////////////
@@ -72,7 +73,6 @@ __global__ void PoissGenSendSpikeKernel(curandState *curand_state, double t,
     }
   }
 }
-
 
 int poiss_gen::Init(int i_node_0, int n_node, int /*n_port*/,
 		    int i_group, unsigned long long *seed)
@@ -131,21 +131,8 @@ int poiss_gen::Update(long long it, double t1)
 int poiss_gen::SendDirectSpikes(double t, float time_step)
 {
   unsigned int grid_dim_x, grid_dim_y;
-  
-  if (n_dir_conn_<65536*1024) { // max grid dim * max block dim
-    grid_dim_x = (n_dir_conn_+1023)/1024;
-    grid_dim_y = 1;
-  }
-  else {
-    grid_dim_x = 64; // I think it's not necessary to increase it
-    if (n_dir_conn_>grid_dim_x*1024*65535) {
-      throw ngpu_exception(std::string("Number of direct connections ")
-			   + std::to_string(n_dir_conn_) +
-			   " larger than threshold "
-			   + std::to_string(grid_dim_x*1024*65535));
-    }
-    grid_dim_y = (n_dir_conn_ + grid_dim_x*1024 -1) / (grid_dim_x*1024);
-  }
+  grid_dim_x = (n_dir_conn_+1023)/1024;
+  grid_dim_y = 1;
   dim3 numBlocks(grid_dim_x, grid_dim_y);
   PoissGenSendSpikeKernel<<<numBlocks, 1024>>>(d_curand_state_, t, time_step,
 					       param_arr_, n_param_,

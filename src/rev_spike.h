@@ -19,11 +19,19 @@ extern unsigned int *d_RevSpikeNum;
 extern unsigned int *d_RevSpikeTarget;
 extern int *d_RevSpikeNConn;
 
+extern unsigned int *d_RevSpikeNum;
+extern unsigned int *d_RevSpikeTarget;
+extern int *d_RevSpikeNConn;
+
 __global__ void RevSpikeReset();
+
+__device__ void InternRevSpikeReset();
 
 __global__ void RevSpikeBufferUpdate(unsigned int n_node);
 
-int RevSpikeInit(NetConnection *net_connection);
+__device__ void InternRevSpikeBufferUpdate(unsigned int n_node, int _it);
+
+int RevSpikeInit(NetConnection *net_connection, int num_blocks);
 
 int RevSpikeFree();
 

@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import numpy as np
+import seaborn as sns
 if 'DISPLAY' not in os.environ:
     import matplotlib
     matplotlib.use('Agg')
@@ -297,6 +298,35 @@ def firing_rates(path, name, begin, end):
     print('Standard deviation of rates: {} spikes/s'.format(
         np.around(all_std_rates, decimals=3)))
 
+def histplot(path, populations):
+    """ Creates a boxblot of the firing rates of all populations.
+
+    To create the boxplot, the firing rates of each neuron in each population
+    need to be computed with the function ``firing_rate()``.
+
+    Parameters
+    -----------
+    path
+        Path where the firing rates are stored.
+    populations
+        Names of neuronal populations.
+
+    Returns
+    -------
+    None
+
+    """
+    pop_names = [string.replace('23', '2/3') for string in populations]
+
+    for i in np.arange(len(populations))[::-1]:
+        plt.clf()
+        rates_per_neuron_rev = \
+            np.loadtxt(os.path.join(path, ('rate' + str(i) + '.dat')))
+        plot = sns.kdeplot(rates_per_neuron_rev)
+        plot.set(xlabel='rate (spikes/s)')
+        plot.set_title(f'Firing Rate {pop_names[i]}')
+        fig = plot.get_figure()
+        fig.savefig(os.path.join(path, f'hist_plot{i}.png'))
 
 def boxplot(path, populations):
     """ Creates a boxblot of the firing rates of all populations.

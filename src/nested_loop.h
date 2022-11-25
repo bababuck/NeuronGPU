@@ -23,8 +23,10 @@ namespace NestedLoop
   
   int Init();
   int Run(int Nx, int *d_Ny, int i_func);
+  __device__ int InternRun(int Nx, int *d_Ny, int i_func, int _it);
   int CumulSumNestedLoop(int Nx, int *d_Ny, int i_func);  
-
+  __device__ int InternCumulSumNestedLoop(int Nx, int *d_Ny, int i_func, int _it);  
+  
   int Free();
 }
 

@@ -82,6 +82,7 @@ const std::string iaf_psc_exp_g_group_param_name[N_GROUP_PARAM] = {
 
 class iaf_psc_exp_g : public BaseNeuron
 {
+public:
   float time_resolution_;
 
  public:
