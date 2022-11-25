@@ -28,6 +28,13 @@ extern __device__ int *SpikeConnIdx;
 extern __device__ float *SpikeHeight;
 extern __device__ int *SpikeTargetNum;
 
+__device__ int InternMaxSpikeNum;
+__device__ int *InternSpikeNum;
+__device__ int *InternSpikeSourceIdx;
+__device__ int *InternSpikeConnIdx;
+__device__ float *InternSpikeHeight;
+__device__ int *InternSpikeTargetNum;
+
 __global__ void DeviceSpikeInit(int *spike_num, int *spike_source_idx,
 				int *spike_conn_idx, float *spike_height,
 				int *spike_target_num, int max_spike_num);

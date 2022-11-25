@@ -59,7 +59,7 @@ __device__ void InternCumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
     if (array_idx<Ny_sum) {
       int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
       int iy = (int)(array_idx - Ny_cumul_sum[ix]);
-      NestedLoopFunction0(ix, iy);
+      NestedLoopFunction0(ix, iy, false);
     }
   }
 }
@@ -72,7 +72,7 @@ __global__ void CumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
   if (array_idx<Ny_sum) {
     int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
     int iy = (int)(array_idx - Ny_cumul_sum[ix]);
-    NestedLoopFunction0(ix, iy);
+    NestedLoopFunction0(ix, iy, true);
   }
 }
 
