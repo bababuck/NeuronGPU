@@ -580,7 +580,7 @@ int NeuronGPU::InternSimulationStep()
     
   time_mark = getRealTime();
 
-  ClearGetSpikeArrays();    
+  InternClearGetSpikeArrays();    
   if (d_InternSpikeNum[blockIdx.x] > 0) {
     if (threadIdx.x == 0) {
       time_mark = getRealTime();    
