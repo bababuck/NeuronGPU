@@ -26,6 +26,12 @@ extern __constant__ float NeuronGPUTimeResolution;
 extern __constant__ NodeGroupStruct NodeGroupArray[];
 extern __device__ signed char *NodeGroupMap;
 
+extern __device__ int InternMaxSpikeNum;
+extern __device__ int *InternSpikeNum;
+extern __device__ int *InternSpikeSourceIdx;
+extern __device__ int *InternSpikeConnIdx;
+extern __device__ float *InternSpikeHeight;
+extern __device__ int *InternSpikeTargetNum;
 extern __device__ int* nodes_per_block;
 
 extern __device__ void SynapseUpdate(int syn_group, float *w, float Dt);

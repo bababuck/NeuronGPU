@@ -34,6 +34,7 @@ extern __constant__ long long NeuronGPUTimeIdx;
 extern __constant__ float NeuronGPUTimeResolution;
 extern __constant__ NodeGroupStruct NodeGroupArray[];
 extern __device__ signed char *NodeGroupMap;
+extern __device__ int *nodes_per_block;
 
 __device__ int MaxSpikeBufferSize;
 __device__ int NSpikeBuffer;
@@ -234,8 +235,8 @@ __device__ void InternSpikeBufferUpdate()
 {
   int node_idx = threadIdx.x;
   int stride = blockDim.x;
-  for (;node_idx < nodes_per_block; node_idx += stride){
-  int i_spike_buffer = node_idx + nodes_per_block * blockIdx.x;
+  for (;node_idx < *nodes_per_block; node_idx += stride){
+  int i_spike_buffer = node_idx + *nodes_per_block * blockIdx.x;
   if (i_spike_buffer>=NSpikeBuffer) return;
   
   int i_group=NodeGroupMap[i_spike_buffer];
@@ -386,18 +387,6 @@ __global__ void InitLastSpikeTimeIdx(unsigned int n_spike_buffers,
   LastSpikeTimeIdx[i_spike_buffer] = spike_time_idx;
   LastRevSpikeTimeIdx[i_spike_buffer] = spike_time_idx;
 }
-
-__global__ void InitLastSpikeTimeIdx(unsigned int n_spike_buffers,
-				       int spike_time_idx)
-{
-  unsigned int i_spike_buffer = threadIdx.x + blockIdx.x * blockDim.x;
-  if (i_spike_buffer>=n_spike_buffers) {
-    return;
-  }
-  LastSpikeTimeIdx[i_spike_buffer] = spike_time_idx;
-  LastRevSpikeTimeIdx[i_spike_buffer] = spike_time_idx;
-}
-
 
 int SpikeBufferInit(NetConnection *net_connection, int max_spike_buffer_size)
 {

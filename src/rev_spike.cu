@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2020 Bruno Golosio
+1;95;0cCopyright (C) 2020 Bruno Golosio
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -28,11 +28,8 @@ unsigned int *d_RevSpikeNum;
 unsigned int *d_RevSpikeTarget;
 int *d_RevSpikeNConn;
 
-unsigned int *d_InternRevSpikeNum;
-unsigned int *d_InternRevSpikeTarget;
-int *d_InternRevSpikeNConn;
-
 extern __device__ void SynapseUpdate(int syn_group, float *w, float Dt);
+extern __device__ int *nodes_per_block;
 
 __device__ unsigned int *RevSpikeNum;
 __device__ unsigned int *RevSpikeTarget;
@@ -87,8 +84,8 @@ __global__ void RevSpikeBufferUpdate(unsigned int n_node)
 
 __device__ void InternRevSpikeBufferUpdate(unsigned int n_node)
 {
-  unsigned int offset = *neurons_per_group * blockIdx.x;
-  for (unsigned int i_node = threadIdx.x + offset; i_node<n_node && i_node < *neurons_per_group; i+=blockDim.x) { 
+  unsigned int offset = *nodes_per_block * blockIdx.x;
+  for (unsigned int i_node = threadIdx.x + offset; i_node<n_node && i_node < *nodes_per_block; i_node+=blockDim.x) { 
     long long target_spike_time_idx = LastRevSpikeTimeIdx[i_node];
     // Check if a spike reached the input synapses now
     if (target_spike_time_idx!=NeuronGPUTimeIdx) {
@@ -96,7 +93,7 @@ __device__ void InternRevSpikeBufferUpdate(unsigned int n_node)
     }
     int n_conn = TargetRevConnectionSize[i_node];
     if (n_conn>0) {
-      unsigned int pos = atomicAdd(InternRevSpikeNum, 1);
+      unsigned int pos = atomicAdd(&InternRevSpikeNum[blockIdx.x], 1);
       InternRevSpikeTarget[pos] = i_node;
       InternRevSpikeNConn[pos] = n_conn;
     }
@@ -152,11 +149,11 @@ __global__ void DeviceInternRevSpikeInit(unsigned int *rev_spike_num,
 				         int *rev_spike_n_conn,
 					 int num_blocks)
 {
-  RevSpikeNum = rev_spike_num;
-  RevSpikeTarget = rev_spike_target;
-  RevSpikeNConn = rev_spike_n_conn;
+  InternRevSpikeNum = rev_spike_num;
+  InternRevSpikeTarget = rev_spike_target;
+  InternRevSpikeNConn = rev_spike_n_conn;
   for (int i=0;i<num_blocks;++i){
-    RevSpikeNum[i] = 0;
+    InternRevSpikeNum[i] = 0;
   }
 }
 
@@ -215,6 +212,8 @@ int RevSpikeInit(NetConnection *net_connection, int num_blocks)
   DeviceRevSpikeInit<<<1,1>>>(d_RevSpikeNum, d_RevSpikeTarget,
 			      d_RevSpikeNConn);
 
+  unsigned int *d_InternRevSpikeNum, *d_InternRevSpikeTarget;
+  int *d_InternRevSpikeNConn;
   gpuErrchk(cudaMalloc(&d_InternRevSpikeNum, num_blocks*sizeof(unsigned int)));
   gpuErrchk(cudaMalloc(&d_InternRevSpikeTarget,
 		       n_spike_buffers*sizeof(unsigned int)));

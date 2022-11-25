@@ -26,7 +26,6 @@ namespace NestedLoop
   __device__ int InternRun(int Nx, int *d_Ny, int i_func);
   int CumulSumNestedLoop(int Nx, int *d_Ny, int i_func);  
   __device__ int InternCumulSumNestedLoop(int Nx, int *d_Ny, int i_func);  
-  __device__ void simple_scan(int *out, int *data, int length);
   
   int Free();
 }

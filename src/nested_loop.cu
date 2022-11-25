@@ -26,14 +26,29 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 //////////////////////////////////////////////////////////////////////
 // declare here the functions called by the nested loop 
-__device__ void NestedLoopFunction0(int ix, int iy);
-__device__ void NestedLoopFunction1(int ix, int iy);
+__device__ void NestedLoopFunction0(int ix, int iy, bool all_connections);
+__device__ void NestedLoopFunction1(int ix, int iy, bool all_connections);
 //////////////////////////////////////////////////////////////////////
 
 namespace NestedLoop
 {
   PrefixScan prefix_scan_;
   int *d_Ny_cumul_sum_;   
+}
+
+__device__ int* d_intern_Ny_cumul_sum_[30];
+
+__device__
+void simple_scan(int *out, int *data, int length)
+{
+  if (!threadIdx.x) {
+    out[0] = 0;
+    for (int i=1;i<length;++i) {
+      out[i] = data[i-1] + out[i-1];
+    }
+  }
+  __syncthreads();
+  return;
 }
 
 __device__ int locate(int val, int *data, int n)
@@ -55,7 +70,7 @@ __device__ void InternCumulSumNestedLoopKernel0(int Nx, int *Ny_cumul_sum,
 					        int Ny_sum)
 {
   int stride = blockDim.x;
-  for (int array_idx=threadIdx.x;i<Ny_sum;array_idx+=stride) {
+  for (int array_idx=threadIdx.x;array_idx<Ny_sum;array_idx+=stride) {
     if (array_idx<Ny_sum) {
       int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
       int iy = (int)(array_idx - Ny_cumul_sum[ix]);
@@ -80,11 +95,11 @@ __device__ void InternCumulSumNestedLoopKernel1(int Nx, int *Ny_cumul_sum,
 		    			        int Ny_sum)
 {
   int stride = blockDim.x;
-  for (int array_idx=threadIdx.x;i<Ny_sum;array_idx+=stride) {
+  for (int array_idx=threadIdx.x;array_idx<Ny_sum;array_idx+=stride) {
     if (array_idx<Ny_sum) {
       int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
       int iy = (int)(array_idx - Ny_cumul_sum[ix]);
-      NestedLoopFunction1(ix, iy);
+      NestedLoopFunction1(ix, iy, false);
     }
   }
 }
@@ -97,7 +112,7 @@ __global__ void CumulSumNestedLoopKernel1(int Nx, int *Ny_cumul_sum,
   if (array_idx<Ny_sum) {
     int ix = locate(array_idx, Ny_cumul_sum, Nx + 1);
     int iy = (int)(array_idx - Ny_cumul_sum[ix]);
-    NestedLoopFunction1(ix, iy);
+    NestedLoopFunction1(ix, iy, true);
   }
 }
 
@@ -107,13 +122,18 @@ int NestedLoop::Init()
   //prefix_scan_.Init();
   gpuErrchk(cudaMalloc(&d_Ny_cumul_sum_,
 			  PrefixScan::AllocSize*sizeof(int)));
-  
+
+  for (int i=0;i<30;i++){
+     gpuErrchk(cudaMalloc(&d_intern_Ny_cumul_sum_[i],
+                          PrefixScan::AllocSize*sizeof(int)));  
+  }
+
   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////
 __device__
-int InternNestedLoop::Run(int Nx, int *d_Ny, int i_func)
+int NestedLoop::InternRun(int Nx, int *d_Ny, int i_func)
 {
   return InternCumulSumNestedLoop(Nx, d_Ny, i_func);
 }
@@ -127,34 +147,24 @@ int NestedLoop::Run(int Nx, int *d_Ny, int i_func)
 __device__
 int NestedLoop::InternCumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
 {
-  simple_scan(d_Ny_cumul_sum_, d_Ny, Nx+1);
+  simple_scan(d_intern_Ny_cumul_sum_[blockIdx.x], d_Ny, Nx+1);
 
-  int Ny_sum;
-  gpuErrchk(cudaMemcpy(&Ny_sum, &d_Ny_cumul_sum_[Nx],
-			  sizeof(int), cudaMemcpyDeviceToHost));
+  int Ny_sum = d_intern_Ny_cumul_sum_[blockIdx.x][Nx];
 
   ////
   if(Ny_sum>0) {
     switch (i_func) {
     case 0:
       InternCumulSumNestedLoopKernel0
-	(Nx, d_Ny_cumul_sum_, Ny_sum);
-      gpuErrchk(cudaPeekAtLastError());
-      gpuErrchk(cudaDeviceSynchronize());
+	(Nx, d_intern_Ny_cumul_sum_[blockIdx.x], Ny_sum);
+      __syncthreads();
       break;
     case 1:
       InternCumulSumNestedLoopKernel1
-	(Nx, d_Ny_cumul_sum_, Ny_sum);
-      gpuErrchk(cudaPeekAtLastError());
-      gpuErrchk(cudaDeviceSynchronize());
+	(Nx, d_intern_Ny_cumul_sum_[blockIdx.x], Ny_sum);
+      __syncthreads();
       break;
-    default:
-      throw ngpu_exception("unknown nested loop function");
     }
-
-    //TMP
-    //printf("cst: %lf\n", getRealTime()-time_mark);
-    //
   }
     
   return 0;
@@ -202,17 +212,4 @@ int NestedLoop::CumulSumNestedLoop(int Nx, int *d_Ny, int i_func)
     }
   }
   return 0;
-}
-
-__device__
-void simple_scan(int *out, int *data, int length)
-{
-  if (!threadIdx.x) {
-    out[0] = 0;
-    for (int i=1;i<length;++i) {
-      out[i] = data[i-1] + out[i-1];
-    }
-  }
-  __thread_sync();
-  return;
 }
