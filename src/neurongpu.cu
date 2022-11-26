@@ -53,7 +53,7 @@ using namespace iaf_psc_exp_g_ns;
 #define THREAD_IDX 0
 #endif
 #define NUM_BLOCKS 30
-#define GroupResolution 10
+#define GroupResolution 1
 				    //#define VERBOSE_TIME
 
 #define I_syn var[i_I_syn]
@@ -389,14 +389,18 @@ __global__ void initNode(iaf_psc_exp_g *node, int i)
 
 int NeuronGPU::Simulate()
 {
+  gpuErrchk( cudaPeekAtLastError() );
+  gpuErrchk( cudaDeviceSynchronize() );
   StartSimulation();
-  
+  gpuErrchk( cudaPeekAtLastError() );
+  gpuErrchk( cudaDeviceSynchronize() );
   for (long long it=0; it<Nt_; it++) {
     if (it%100==0 && verbosity_level_>=2) {
       printf("%.3lf\n", neural_time_);
     }
     SimulationStep();
     gpuErrchk( cudaDeviceSynchronize() );
+    gpuErrchk( cudaPeekAtLastError() );  
   }
   EndSimulation();
 
@@ -427,16 +431,22 @@ int NeuronGPU::StartSimulation()
   neur_t0_ = neural_time_;
   it_ = 0;
   Nt_ = (long long)round(sim_time_/time_resolution_);
- 
-  initNodesPerBlock<<<1,1>>>((node_vect_.size()+NUM_BLOCKS-1) / NUM_BLOCKS);
+
+  gpuErrchk( cudaPeekAtLastError() );
+  gpuErrchk( cudaDeviceSynchronize() );
+  cudaMalloc(&nodes_per_block, sizeof(int)); 
+//  initNodesPerBlock<<<1,1>>>((node_vect_.size()+NUM_BLOCKS-1) / NUM_BLOCKS);
+  gpuErrchk( cudaPeekAtLastError() );
+  gpuErrchk( cudaDeviceSynchronize() );
   cudaMalloc(&d_node_vect, node_vect_.size()*sizeof(iaf_psc_exp_g));
-  for (int i=0;i<node_vect_.size();++i){
+  for (unsigned int i=0;i<node_vect_.size();++i){
     iaf_psc_exp_g *temp;
     cudaMalloc(&temp, sizeof(iaf_psc_exp_g));
-    cudaMemcpy(temp, node_vect_[i], sizeof(iaf_psc_exp_g), cudaMemcpyHostToDevice);
-    initNode<<<1,1>>>(temp, i);
+//    cudaMemcpy(temp, node_vect_[i], sizeof(iaf_psc_exp_g), cudaMemcpyHostToDevice);
+//    initNode<<<1,1>>>(temp, i);
   }
-
+  gpuErrchk( cudaPeekAtLastError() );  
+//  gpuErrchk( cudaDeviceSynchronize() ); 
   return 0;
 }
 
@@ -511,7 +521,9 @@ int NeuronGPU::OriginalSimulationStep() {
     StartSimulation();
   }
   double time_mark;
-
+  SpikeBufferUpdate<<<(net_connection_->connection_.size()+1023)/1024,
+    1024>>>();
+ 
   time_mark = getRealTime();
   if (n_poiss_node_>0) {
     for (int i=0;i<GroupResolution;++i){
@@ -683,7 +695,7 @@ void InternSimulationStep(int it_, float time_resolution_, double neur_t0_, int 
 {
 
   for (int internal_loop=0;internal_loop<GroupResolution;++internal_loop){
-  InternSpikeBufferUpdate();
+/*  InternSpikeBufferUpdate();
   __syncthreads();
 
   for (unsigned int i=blockIdx.x * *nodes_per_block; i<((blockIdx.x + 1) * *nodes_per_block); i++) {
@@ -708,6 +720,7 @@ void InternSimulationStep(int it_, float time_resolution_, double neur_t0_, int 
       NestedLoop::InternRun(InternRevSpikeNum[blockIdx.x], &InternRevSpikeNConn[blockIdx.x * *nodes_per_block], 1);
     }  
   }
+  */
   it_++;
   }
 }
@@ -1949,7 +1962,9 @@ RemoteNodeSeq NeuronGPU::RemoteCreate(int i_host, std::string model_name,
 }
 
 int NeuronGPU::SimulationStep() {
-  InternSimulationStep<<<30, 1024>>>(it_, time_resolution_, neur_t0_, net_connection_->connection_.size(), net_connection_->NRevConnections()>0);
+  InternSimulationStep<<<1, 1024>>>(it_, time_resolution_, neur_t0_, net_connection_->connection_.size(), net_connection_->NRevConnections()>0);
   it_ += GroupResolution;
+  gpuErrchk( cudaPeekAtLastError() );                                                                                                                                                                                                        
+  gpuErrchk( cudaDeviceSynchronize() );
   return OriginalSimulationStep();
 }

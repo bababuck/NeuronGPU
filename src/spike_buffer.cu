@@ -238,11 +238,12 @@ __device__ void InternSpikeBufferUpdate()
   for (;node_idx < *nodes_per_block; node_idx += stride){
   int i_spike_buffer = node_idx + *nodes_per_block * blockIdx.x;
   if (i_spike_buffer>=NSpikeBuffer) return;
-  
   int i_group=NodeGroupMap[i_spike_buffer];
   int den_delay_idx;
+
   float *den_delay_arr = NodeGroupArray[i_group].den_delay_arr_;
-  // check if node has dendritic delay  
+  // check if node has dendritic delay
+
   if (den_delay_arr != NULL) {
     int i_neuron = i_spike_buffer - NodeGroupArray[i_group].i_node_0_;
     int n_param = NodeGroupArray[i_group].n_param_;
